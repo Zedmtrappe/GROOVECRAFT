@@ -352,7 +352,7 @@ public final class PresetStore {
         try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
         let files = (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
         var loaded: [Preset] = []
-        for url in files where url.pathExtension == "gcpreset" || url.pathExtension == "json" {
+        for url in files where url.pathExtension == "gcpreset" {
             if let p = try? PresetStore.read(url) { loaded.append(p) }
         }
         userPresets = loaded.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
