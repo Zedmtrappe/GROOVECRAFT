@@ -37,8 +37,7 @@ the user's own drum instruments (Logic Pro etc.) over virtual MIDI.
 ## Status (27.11.26)
 
 - Engine complete with 59 tests (MIDI, humanisation, analysis, scheduling, documents, batch, presets).
-- macOS app written but **not yet compiled**: there's no Swift for macOS in the cloud container.
-  The first Mac build will likely show compile errors to fix.
-- The owner's Mac needs a self-hosted runner registered for this repository (Docs/BUILDING.md).
-  `compile-check.yml` is a GitHub-hosted alternative that uses paid minutes: run it only with
+- macOS app builds on the owner's Mac (runner `groovecraft-mac`, build 2). Not yet tried by hand:
+  the Logic virtual port, playback timing by ear, and the editor's feel.
+- `compile-check.yml` is a GitHub-hosted alternative that uses paid minutes: run it only with
   the owner's agreement.
