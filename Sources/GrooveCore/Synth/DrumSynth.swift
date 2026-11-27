@@ -217,6 +217,12 @@ public final class PreviewRenderer {
         public var category: DrumCategory
         public var note: Int
         public var velocity: Int
+        public init(start: Double, category: DrumCategory, note: Int, velocity: Int) {
+            self.start = start
+            self.category = category
+            self.note = note
+            self.velocity = velocity
+        }
     }
 
     public let sampleRate: Double

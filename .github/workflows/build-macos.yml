@@ -1,0 +1,70 @@
+name: Build Groovecraft (macOS)
+
+# Runs on the owner's own Mac (a GitHub "self-hosted runner" registered for this repository),
+# so builds use no GitHub Actions minutes. The Mac needs Xcode and Homebrew's xcodegen.
+# Started by hand only (Actions ▸ Build Groovecraft ▸ Run workflow, or the API).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & test (own Mac)
+    runs-on: [self-hosted, macOS, ARM64]
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tools
+        run: |
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          xcodebuild -version || { echo "::error::Xcode isn't set up: install it from the App Store, open it once, then run: sudo xcode-select -s /Applications/Xcode.app"; exit 1; }
+          command -v xcodegen >/dev/null || { echo "::error::xcodegen is missing: brew install xcodegen"; exit 1; }
+          swift --version
+
+      - name: Engine tests
+        run: |
+          set -o pipefail
+          swift test 2>&1 | tee test.log | grep -E "error:|failed|Executed .* tests" || true
+          if grep -qE "Fatal error|error: Process .*xctest|Exited with (signal|unexpected)" test.log; then echo "::error::A test crashed"; grep -E "Fatal error" test.log; exit 1; fi
+          grep -E "Executed .* tests" test.log | tail -1 | grep -qE "[^0-9]0 failures"
+
+      - name: Generate Xcode project
+        run: |
+          export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+          xcodegen generate
+
+      - name: Build Groovecraft
+        run: |
+          set -o pipefail
+          xcodebuild -project Groovecraft.xcodeproj -scheme Groovecraft \
+            -configuration Release -destination 'generic/platform=macOS' \
+            -derivedDataPath build \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=NO CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            CODE_SIGN_IDENTITY="-" CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="" \
+            build 2>&1 | tee build.log | grep -E "error:|warning: unre|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log
+
+      - name: Sign, verify and package
+        run: |
+          BUNDLE="build/Build/Products/Release/Groovecraft.app"
+          test -d "$BUNDLE"
+          codesign --force --deep --sign - "$BUNDLE"
+          codesign --verify --deep --strict "$BUNDLE"
+          /usr/libexec/PlistBuddy -c "Print :UTExportedTypeDeclarations:0:UTTypeIdentifier" "$BUNDLE/Contents/Info.plist" | grep -qx com.groovecraft.project
+          ditto -c -k --keepParent "$BUNDLE" Groovecraft-macOS.zip
+
+      # The runner is the owner's own Mac: the app goes straight into a folder there.
+      - name: Copy the app to the Mac
+        run: |
+          DEST="$HOME/Downloads/Groovecraft builds"
+          if ! mkdir -p "$DEST" 2>/dev/null || ! touch "$DEST/.write-test" 2>/dev/null; then
+            DEST="$HOME/Desktop/Groovecraft builds"; mkdir -p "$DEST"
+          fi
+          rm -f "$DEST/.write-test"
+          cp -f Groovecraft-macOS.zip "$DEST/"
+          echo "Groovecraft: build ${{ github.run_number }} ($(git rev-parse --short HEAD)), $(date '+%d %b %Y %H:%M')" > "$DEST/Build info.txt"
+          echo "App copied to: $DEST"

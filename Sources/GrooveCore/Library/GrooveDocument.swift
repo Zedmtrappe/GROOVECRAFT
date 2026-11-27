@@ -272,6 +272,25 @@ public final class GrooveDocument {
         return v
     }
 
+    /// Live update: re-renders the selected take in place with the current controls and its
+    /// own seed (hand-edited takes are left alone). Not an undo step by itself: callers record
+    /// one when the control change begins, so undo restores controls and take together.
+    @discardableResult
+    public func refreshSelectedTake() -> Bool {
+        guard let v = selectedVariation, !v.isEdited else { return false }
+        let settings = currentSettings(seed: v.seed)
+        let perf = performance(settings: settings)
+        let label = presetLabel()
+        changeWithoutUndo { s in
+            guard let i = s.variations.firstIndex(where: { $0.id == v.id }) else { return }
+            s.variations[i].notes = perf.notes
+            s.variations[i].settings = settings
+            s.variations[i].stats = perf.stats
+            s.variations[i].presetName = label
+        }
+        return true
+    }
+
     static func nextSeed(after seed: UInt64) -> UInt64 {
         // Seeds stay below 2^48 so they survive JSON round trips exactly.
         var r = SeededRandom(seed: seed)

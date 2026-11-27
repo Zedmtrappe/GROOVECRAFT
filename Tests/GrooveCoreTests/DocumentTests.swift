@@ -60,6 +60,23 @@ final class DocumentTests: XCTestCase {
         XCTAssertNotEqual(a.notes, b.notes)
     }
 
+    func testLiveRefreshUpdatesTakeInPlaceAndUndoesAsOne() throws {
+        let doc = try makeDoc()
+        let take = doc.humanise()[0]
+        doc.beginContinuousChange("Velocity")
+        doc.changeWithoutUndo { $0.quick.velocity = 1 }
+        XCTAssertTrue(doc.refreshSelectedTake())
+        XCTAssertEqual(doc.state.variations.count, 1)
+        XCTAssertEqual(doc.selectedVariation?.seed, take.seed)
+        XCTAssertNotEqual(doc.selectedVariation?.notes, take.notes)
+        doc.undo()
+        XCTAssertEqual(doc.selectedVariation?.notes, take.notes)
+        XCTAssertEqual(doc.state.quick.velocity, 0.5)
+        // Hand-edited takes are never overwritten.
+        doc.edit(.delete(ids: [take.notes[0].id]))
+        XCTAssertFalse(doc.refreshSelectedTake())
+    }
+
     func testEditingTheOriginalMakesAnEditedTake() throws {
         let doc = try makeDoc()
         let target = doc.pattern.notes[3]

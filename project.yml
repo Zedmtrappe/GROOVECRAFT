@@ -1,0 +1,38 @@
+# XcodeGen spec: generates Groovecraft.xcodeproj
+#   brew install xcodegen && xcodegen generate
+name: Groovecraft
+options:
+  bundleIdPrefix: com.groovecraft
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    ENABLE_HARDENED_RUNTIME: NO
+    GENERATE_INFOPLIST_FILE: YES
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+targets:
+  GrooveCore:
+    type: library.static
+    platform: macOS
+    sources: [Sources/GrooveCore]
+  Groovecraft:
+    type: application
+    platform: macOS
+    sources:
+      - Sources/GroovecraftApp
+      - path: Resources/Assets.xcassets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.groovecraft.app
+        PRODUCT_NAME: Groovecraft
+        INFOPLIST_FILE: Resources/Groovecraft-Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.music
+        INFOPLIST_KEY_NSHumanReadableCopyright: ""
+        ARCHS: arm64
+    dependencies:
+      - target: GrooveCore

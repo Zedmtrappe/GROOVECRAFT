@@ -60,7 +60,7 @@ public struct DrumPattern: Codable, Equatable, Sendable {
         self.channelFilter = channelFilter
     }
 
-    static func order(_ a: DrumNote, _ b: DrumNote) -> Bool {
+    public static func order(_ a: DrumNote, _ b: DrumNote) -> Bool {
         if a.tick != b.tick { return a.tick < b.tick }
         if a.pitch != b.pitch { return a.pitch < b.pitch }
         return a.id < b.id
