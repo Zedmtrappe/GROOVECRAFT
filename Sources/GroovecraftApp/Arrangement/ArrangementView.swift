@@ -831,7 +831,7 @@ final class ArrangementView: NSView {
     }
 
     private var clickBar = 0
-    @objc private func menuDelete() { delegate?.arrangementDelete(model.selection) }
+    @objc private func menuDelete() { delegate?.arrangementDelete(ids: model.selection) }
     @objc private func menuLouder() { delegate?.arrangementBeginEdit(); delegate?.arrangementSetVelocity(ids: model.selection, delta: 8) }
     @objc private func menuSofter() { delegate?.arrangementBeginEdit(); delegate?.arrangementSetVelocity(ids: model.selection, delta: -8) }
     @objc private func menuLonger() { delegate?.arrangementSetLength(ids: model.selection, factor: 1.5) }
@@ -848,7 +848,7 @@ final class ArrangementView: NSView {
         let sel = m.selection
         switch event.keyCode {
         case 51, 117: // delete, forward delete
-            if !sel.isEmpty { delegate?.arrangementDelete(sel) }
+            if !sel.isEmpty { delegate?.arrangementDelete(ids: sel) }
         case 123, 124: // left / right: nudge 1/64 beat (⌥ = 1/256)
             guard !sel.isEmpty else { return }
             let step = Double(m.ppq) / (event.modifierFlags.contains(.option) ? 256 : 64)

@@ -95,10 +95,10 @@ enum AudioFileLoader {
         var channels: Int
         var duration: Double
         var formatDescription: String
-        var analysisBuffer: AudioBuffer {
+        var analysisBuffer: GrooveCore.AudioBuffer {
             var mono = [Float](repeating: 0, count: left.count)
             for i in 0 ..< left.count { mono[i] = (left[i] + right[i]) * 0.5 }
-            return AudioBuffer(mono: mono, sampleRate: sampleRate, channels: channels)
+            return GrooveCore.AudioBuffer(mono: mono, sampleRate: sampleRate, channels: channels)
         }
     }
 
