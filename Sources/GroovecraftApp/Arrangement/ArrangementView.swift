@@ -10,6 +10,7 @@ protocol ArrangementDelegate: AnyObject {
     func arrangementBeginEdit()
     func arrangementMove(ids: Set<Int>, deltaTicks: Double, toPitch: Int?)
     func arrangementSetVelocity(ids: Set<Int>, delta: Int)
+    func arrangementSetLength(ids: Set<Int>, factor: Double)
     func arrangementAddNote(pitch: Int, tick: Double)
     func arrangementDelete(ids: Set<Int>)
     func arrangementSetAlignment(offset: Double, commit: Bool)
@@ -816,6 +817,8 @@ final class ArrangementView: NSView {
             menu.addItem(withTitle: "Delete Selected Notes", action: #selector(menuDelete), keyEquivalent: "")
             menu.addItem(withTitle: "Louder (+8)", action: #selector(menuLouder), keyEquivalent: "")
             menu.addItem(withTitle: "Softer (−8)", action: #selector(menuSofter), keyEquivalent: "")
+            menu.addItem(withTitle: "Longer Notes", action: #selector(menuLonger), keyEquivalent: "")
+            menu.addItem(withTitle: "Shorter Notes", action: #selector(menuShorter), keyEquivalent: "")
             menu.addItem(.separator())
         }
         menu.addItem(withTitle: "Loop Bar \(bar + 1)", action: #selector(menuLoopBar), keyEquivalent: "")
@@ -831,6 +834,8 @@ final class ArrangementView: NSView {
     @objc private func menuDelete() { delegate?.arrangementDelete(model.selection) }
     @objc private func menuLouder() { delegate?.arrangementBeginEdit(); delegate?.arrangementSetVelocity(ids: model.selection, delta: 8) }
     @objc private func menuSofter() { delegate?.arrangementBeginEdit(); delegate?.arrangementSetVelocity(ids: model.selection, delta: -8) }
+    @objc private func menuLonger() { delegate?.arrangementSetLength(ids: model.selection, factor: 1.5) }
+    @objc private func menuShorter() { delegate?.arrangementSetLength(ids: model.selection, factor: 0.66) }
     @objc private func menuLoopBar() { delegate?.arrangementSetLoop(bars: clickBar ... clickBar) }
     @objc private func menuProcessHere() { delegate?.arrangementProcessBars(max(0, clickBar - 2) ... (clickBar + 2)) }
     @objc private func menuProcessAll() { delegate?.arrangementProcessBars(nil) }

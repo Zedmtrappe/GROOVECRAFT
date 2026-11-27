@@ -65,6 +65,49 @@ final class MIDIFileTests: XCTestCase {
         XCTAssertThrowsError(try MIDIParser.parse(truncated))
     }
 
+    func testSMPTEUnknownChunksAndRIFFWrapper() throws {
+        // SMPTE division: 25 fps × 40 ticks/frame = 1000 ticks per second.
+        var bytes: [UInt8] = Array("MThd".utf8) + [0, 0, 0, 6, 0, 0, 0, 1, 0xE7, 40]
+        bytes += Array("XFIH".utf8) + [0, 0, 0, 3, 1, 2, 3]       // unknown chunk: skipped
+        let track: [UInt8] = [
+            0x00, 0x99, 36, 100,
+            0x87, 0x68, 0x89, 36, 0,           // 1000 ticks later = 1 s
+            0x00, 0x99, 38, 90,
+            0x00, 0x89, 38, 0,
+            0x00, 0xFF, 0x2F, 0x00,
+        ]
+        bytes += Array("MTrk".utf8) + [0, 0, 0, UInt8(track.count)] + track
+        let file = try MIDIParser.parse(Data(bytes))
+        XCTAssertEqual(file.noteCount, 2)
+        // Converted to PPQ with a 120 BPM tempo: the second note is at 1 s.
+        let pattern = DrumPattern.extract(from: file, source: DrumPattern.detectSource(in: file))
+        let snare = pattern.notes.first { $0.pitch == 38 }!
+        XCTAssertEqual(file.tempoMap.seconds(atTick: snare.tick), 1.0, accuracy: 0.002)
+
+        // RIFF "RMID" wrapper around a normal file.
+        let inner = [UInt8](MIDIWriter.data(for: Fixtures.rockBeat(bars: 1)))
+        var riff: [UInt8] = Array("RIFF".utf8) + [0, 0, 0, 0] + Array("RMIDdata".utf8) + [0, 0, 0, 0]
+        riff += inner
+        XCTAssertEqual(try MIDIParser.parse(Data(riff)).noteCount, Fixtures.rockBeat(bars: 1).noteCount)
+    }
+
+    func testTimeSignatureAndTempoChangesAnalysed() {
+        var file = Fixtures.rockBeat(bars: 4)
+        file.tracks[0].events.insert(.tempo(tick: 1920 * 2, bpm: 90), at: 2)
+        file.tracks[0].events.insert(.timeSignature(tick: 1920 * 2, numerator: 3, denominator: 4), at: 3)
+        file.tracks[0].sortEvents()
+        let back = try! MIDIParser.parse(MIDIWriter.data(for: file))
+        let map = back.tempoMap
+        XCTAssertTrue(map.hasTempoChanges)
+        XCTAssertEqual(map.bpm(atTick: 1920 * 3), 90, accuracy: 0.01)
+        XCTAssertEqual(map.signature(atTick: 1920 * 3).numerator, 3)
+        let input = Fixtures.input(back)
+        XCTAssertTrue(input.analysis.hasTempoChanges)
+        // Humanising a part with tempo and metre changes still keeps every note valid.
+        let out = HumanisationEngine.humanise(input)
+        XCTAssertEqual(out.notes.count, input.pattern.notes.count)
+    }
+
     func testTruncatedTrackIsTolerated() throws {
         let data = MIDIWriter.data(for: Fixtures.rockBeat(bars: 1))
         // Chop the last few bytes (end-of-track) off; the reader still recovers the notes.

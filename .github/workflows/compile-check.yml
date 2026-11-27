@@ -1,0 +1,34 @@
+name: Compile check (GitHub-hosted Mac)
+
+# Optional alternative to the owner's Mac: compiles and tests on a GitHub-hosted macOS
+# machine. On a private repository this uses paid Actions minutes (macOS minutes count
+# ×10), so it is only started by hand, and only with the owner's agreement.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tools
+        run: |
+          sudo xcode-select -s /Applications/Xcode_15.4.app || true
+          xcodebuild -version
+          brew install xcodegen
+      - name: Engine tests
+        run: swift test 2>&1 | tail -5
+      - name: Build app
+        run: |
+          set -o pipefail
+          xcodegen generate
+          xcodebuild -project Groovecraft.xcodeproj -scheme Groovecraft -configuration Debug \
+            -destination 'generic/platform=macOS' -derivedDataPath build ARCHS=arm64 \
+            CODE_SIGN_IDENTITY="-" CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM="" build 2>&1 \
+            | tee build.log | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
+          grep -q "BUILD SUCCEEDED" build.log

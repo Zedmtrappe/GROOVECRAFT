@@ -111,6 +111,11 @@ struct ArrangementContainer: NSViewRepresentable {
             app.mutate { $0.edit(.velocity(ids: ids, delta: delta), name: "Change Velocity") }
         }
 
+        func arrangementSetLength(ids: Set<Int>, factor: Double) {
+            guard !ids.isEmpty else { return }
+            app.mutate { $0.edit(.length(ids: ids, factor: factor), name: "Change Length") }
+        }
+
         func arrangementAddNote(pitch: Int, tick: Double) {
             guard let doc = app.document else { return }
             let template = doc.pattern.notes.first { $0.pitch == pitch } ?? doc.pattern.notes.first

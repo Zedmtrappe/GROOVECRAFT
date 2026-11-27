@@ -33,3 +33,12 @@ the user's own drum instruments (Logic Pro etc.) over virtual MIDI.
    Ask the owner **"Shall I build now?"** before starting a build. Keep SwiftUI expressions simple and
    give explicit types: the type checker times out on long expressions.
 4. Explain changes to the owner in plain language, with short steps for testing them.
+
+## Status (27.11.26)
+
+- Engine complete with 59 tests (MIDI, humanisation, analysis, scheduling, documents, batch, presets).
+- macOS app written but **not yet compiled**: there's no Swift for macOS in the cloud container.
+  The first Mac build will likely show compile errors to fix.
+- The owner's Mac needs a self-hosted runner registered for this repository (Docs/BUILDING.md).
+  `compile-check.yml` is a GitHub-hosted alternative that uses paid minutes: run it only with
+  the owner's agreement.
