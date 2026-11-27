@@ -45,8 +45,8 @@ public struct BackingAnalysis: Codable, Equatable, Sendable {
     public var density: [Double]
     /// Estimate: likelihood of vocals (mid-band, harmonic, sustained activity).
     public var vocalActivity: [Double]
-    /// Estimated sections (labels are guesses; users can edit them).
-    public var sections: [SectionMarker]
+    /// Estimated sections in audio time (labels are guesses; users can edit them).
+    public var sections: [EstimatedSection]
     /// Estimate: harmonic changes from chroma template matching.
     public var chordChanges: [ChordEvent]
     /// The backing track's own micro-timing: mean offset of onsets per 16th step of the beat
@@ -60,7 +60,7 @@ public struct BackingAnalysis: Codable, Equatable, Sendable {
 
     public init(duration: Double, tempo: TempoEstimate, beats: [Double], downbeatPhase: Int, beatsPerBar: Int,
                 onsets: [Onset], bassOnsets: [Onset], curveRate: Double, energy: [Double], lowEnergy: [Double],
-                density: [Double], vocalActivity: [Double], sections: [SectionMarker], chordChanges: [ChordEvent],
+                density: [Double], vocalActivity: [Double], sections: [EstimatedSection], chordChanges: [ChordEvent],
                 grooveOffsets: [Double], grooveConfidence: Double, swingRatio: Double, overview: [Float], overviewRate: Double) {
         self.duration = duration
         self.tempo = tempo
@@ -98,10 +98,49 @@ public struct BackingAnalysis: Codable, Equatable, Sendable {
         curve.isEmpty ? 0 : curve.reduce(0, +) / Double(curve.count)
     }
 
+    /// Converts the estimated sections to markers on the drum part's bars.
+    public func sectionMarkers(alignment: Alignment, tempoMap: TempoMap, totalBars: Int) -> [SectionMarker] {
+        var markers: [SectionMarker] = []
+        var before: EstimatedSection? = nil     // the section playing when the drums come in
+        for section in sections {
+            let midi = alignment.midiSeconds(audioTime: section.start)
+            if midi < 0.5 && markers.isEmpty { before = section }
+            if midi < -0.5 { continue }
+            let tick = tempoMap.tick(atSeconds: max(0, midi))
+            let pos = tempoMap.position(atTick: tick)
+            // Snap to the nearest bar line.
+            let bar = pos.beat >= pos.beatsInBar / 2 ? pos.bar + 1 : pos.bar
+            guard bar < totalBars else { continue }
+            if markers.contains(where: { $0.bar == bar }) { continue }
+            markers.append(SectionMarker(bar: bar, kind: section.kind, isEstimate: true, energy: section.energy))
+        }
+        if markers.first.map({ $0.bar > 0 }) ?? true, let b = before ?? sections.first {
+            markers.insert(SectionMarker(bar: 0, kind: b.kind, isEstimate: true, energy: b.energy), at: 0)
+        }
+        return markers
+    }
+
     /// Time of the first downbeat according to the beat tracker.
     public var firstDownbeat: Double? {
         guard downbeatPhase < beats.count else { return beats.first }
         return beats[downbeatPhase]
+    }
+}
+
+public struct EstimatedSection: Codable, Equatable, Sendable {
+    public var start: Double
+    public var end: Double
+    public var kind: SectionKind
+    /// Relative energy 0…1.
+    public var energy: Double
+    /// Cluster letter (A, B, C…): sections with the same letter sound alike.
+    public var group: String
+    public init(start: Double, end: Double, kind: SectionKind, energy: Double, group: String) {
+        self.start = start
+        self.end = end
+        self.kind = kind
+        self.energy = energy
+        self.group = group
     }
 }
 
